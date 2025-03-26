@@ -3,12 +3,21 @@ import inquirer from 'inquirer'
 import shell from 'shelljs'
 import chalk from 'chalk'
 import fs from 'fs'
+import {spawn} from 'child_process';
+
+shell.env.FORCE_COLOR = '1';
+
+const isWindows = process.platform === 'win32';
+const npxCmd = isWindows ? 'npx.cmd' : 'npx';
 
 /**
  * This script initializes an Angular project with optional routing and styling options.
  * It uses Inquirer for user prompts, ShellJS for command execution, and Chalk for colored output.
  */
 (async () => {
+  console.log('Welcome to ng-create v1.1.4.')
+  console.log("For more information, kindly visit: " + chalk.cyan.underline(`https://www.npmjs.com/package/ngx-create\n`))
+
   let projectName = process.argv[3]
 
   if (!projectName) {
@@ -18,63 +27,65 @@ import fs from 'fs'
     projectName = answer.projectName
   }
 
+  console.log(chalk.bold.cyan(`Initializing project: ${projectName}..\n`))
+
+  await new Promise((resolve) => {
+    const process = spawn(npxCmd, ['ng', 'new', projectName], { stdio: 'inherit', shell: true });
+    process.on('close', () => {
+      resolve();
+    });
+  });
+
+  shell.cd(projectName)
+
   const answers = await inquirer.prompt([
-    { type: 'confirm', name: 'enableRouting', message: 'Enable Routing?', default: true },
-    {
-      type: 'list',
-      name: 'style',
-      message: 'Choose a stylesheet format:',
-      choices: ['CSS', 'SCSS', 'SASS', 'LESS'],
-      default: 'SCSS'
-    },
     {
       type: 'checkbox',
       name: 'frameworks',
-      message: 'Select frameworks to install:',
+      loop: false,
+      message: chalk.bold.white('\nSelect frameworks to install!'),
       choices: ['Angular Material', 'Tailwind CSS', 'Bootstrap', 'NgRx']
     }
   ])
 
-  console.log(chalk.green(`\nCreating project: ${projectName}...\n`))
-  shell.exec(`ng new ${projectName} --routing=${answers.enableRouting} --style=${answers.style.toLowerCase()}`, { silent: false })
-
-  shell.cd(projectName)
-
   if (answers.frameworks.includes('Angular Material')) {
     console.log(chalk.yellow('\nInstalling Angular Material...\n'))
-    shell.exec(`ng add @angular/material --skip-confirmation`, { silent: false })
+    await new Promise((resolve) => {
+      const process = spawn(npxCmd, ['ng', 'add', '@angular/material'], { stdio: 'inherit', shell: true });
+      process.on('close', () => {
+        resolve();
+      });
+    });
   }
+
+  const stylesFile = shell.ls("src/styles.*")[0];
 
   if (answers.frameworks.includes('Tailwind CSS')) {
     console.log(chalk.yellow('\nInstalling Tailwind CSS...'))
-    shell.exec('npm install -D tailwindcss postcss autoprefixer')
-    shell.exec('npx tailwindcss init -p')
+    shell.exec(`npm install tailwindcss @tailwindcss/postcss postcss`, { stdio: 'inherit' })
 
-    const tailwindConfigPath = 'tailwind.config.js'
-    let tailwindConfig = fs.readFileSync(tailwindConfigPath, 'utf8')
-    tailwindConfig = tailwindConfig.replace(
-      'content: [],',
-      `content: ["./src/**/*.{html,ts}"],`
-    )
-    fs.writeFileSync(tailwindConfigPath, tailwindConfig)
-    console.log(chalk.blue('Updating tailwind.config.js with Angular content paths & styles file.'))
-
-    const stylesPath = `src/styles.${answers.style.toLowerCase()}`
-    shell.ShellString(`\n@tailwind base;\n@tailwind components;\n@tailwind utilities;\n`).toEnd(stylesPath)
+    shell.ShellString(`\n@import "tailwindcss";\n`).toEnd(stylesFile)
+    console.log(chalk.white('Updated Tailwind CSS config file: tailwind.config.js, styles.css'))
   }
 
   if (answers.frameworks.includes('Bootstrap')) {
     console.log(chalk.yellow('\nInstalling Bootstrap...'))
-    shell.exec('npm install bootstrap')
-    shell.ShellString(`\n@import 'bootstrap/dist/css/bootstrap.min.css';\n`).toEnd(`src/styles.${answers.style.toLowerCase()}`)
+    shell.exec(`npm install bootstrap`, { stdio: 'inherit' })
+    shell.ShellString(`\n@import 'bootstrap/dist/css/bootstrap.min.css';\n`).toEnd(stylesFile)
   }
 
   if (answers.frameworks.includes('NgRx')) {
     console.log(chalk.yellow('\nInstalling NgRx Store...\n'))
-    shell.exec(`ng add @ngrx/store --skip-confirmation`, { silent: false })
+    shell.exec(`ng add @ngrx/store --skip-confirmation`, { stdio: 'inherit', shell: true });
   }
 
-  console.log(chalk.green('\nSetup Complete! Run your project with:'))
-  console.log(chalk.cyan(`\tcd ${projectName} && ng serve --open\n`))
+  if (answers.frameworks.length > 0) {
+    console.log(chalk.green('\n✨ Setup Complete! All selected frameworks have been installed successfully.'));
+  } else {
+    console.log(chalk.green('\n✨ Setup Complete!'));
+  }
+  console.log(chalk.green('🚀 You can now start your project by running,\n'));
+  console.log(chalk.cyan(`    cd ${projectName} && ng serve --open\n`))
+
 })();
 

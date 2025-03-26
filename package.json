@@ -1,6 +1,7 @@
 {
   "name": "ngx-create",
-  "version": "1.1.1",
+  "version": "1.1.4",
+  "description": "Automate angular project setup with custom configurations.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -9,10 +10,20 @@
   "bin": {
     "ngx-create": "./index.js"
   },
-  "keywords": ["angular", "cli", "ngx", "setup", "generator"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maran-t/ngx-create.git"
+  },
+  "keywords": [
+    "angular",
+    "cli",
+    "ngx",
+    "setup",
+    "generator",
+    "ngx-create"
+  ],
   "author": "Manimaran T",
   "license": "MIT",
-  "description": "",
   "dependencies": {
     "@angular/cli": "^19.2.4",
     "chalk": "^5.4.1",
