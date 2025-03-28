@@ -5,7 +5,7 @@
 ## Installation
 
 ```sh
-npm install -g @ngx-create
+npm install -g ngx-create
 ```
 
 ## Usage

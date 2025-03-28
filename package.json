@@ -1,6 +1,6 @@
 {
   "name": "ngx-create",
-  "version": "1.1.4",
+  "version": "2.1.5",
   "description": "Automate angular project setup with custom configurations.",
   "main": "index.js",
   "scripts": {
