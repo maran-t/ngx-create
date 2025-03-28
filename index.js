@@ -10,12 +10,23 @@ shell.env.FORCE_COLOR = '1';
 const isWindows = process.platform === 'win32';
 const npxCmd = isWindows ? 'npx.cmd' : 'npx';
 
+function getAngularVersion() {
+  try {
+    const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+    const angularCoreVersion = packageJson.dependencies['@angular/core'] || packageJson.devDependencies['@angular/core'];
+    return angularCoreVersion ? angularCoreVersion.replace('^', '').split('.')[0] : null;
+  } catch (error) {
+    console.error(chalk.red('Error reading Angular version:', error));
+    return null;
+  }
+}
+
 /**
  * This script initializes an Angular project with optional routing and styling options.
  * It uses Inquirer for user prompts, ShellJS for command execution, and Chalk for colored output.
  */
 (async () => {
-  console.log('Welcome to ng-create v1.1.4.')
+  console.log('Welcome to ng-create v2.0.')
   console.log("For more information, kindly visit: " + chalk.cyan.underline(`https://www.npmjs.com/package/ngx-create\n`))
 
   let projectName = process.argv[3]
@@ -38,12 +49,14 @@ const npxCmd = isWindows ? 'npx.cmd' : 'npx';
 
   shell.cd(projectName)
 
+  const angularVersion = getAngularVersion();
+
   const answers = await inquirer.prompt([
     {
       type: 'checkbox',
       name: 'frameworks',
       loop: false,
-      message: chalk.bold.white('\nSelect frameworks to install!'),
+      message: chalk.bold.white('Select frameworks to install!'),
       choices: ['Angular Material', 'Tailwind CSS', 'Bootstrap', 'NgRx']
     }
   ])
@@ -62,9 +75,19 @@ const npxCmd = isWindows ? 'npx.cmd' : 'npx';
 
   if (answers.frameworks.includes('Tailwind CSS')) {
     console.log(chalk.yellow('\nInstalling Tailwind CSS...'))
-    shell.exec(`npm install tailwindcss @tailwindcss/postcss postcss`, { stdio: 'inherit' })
 
-    shell.ShellString(`\n@import "tailwindcss";\n`).toEnd(stylesFile)
+    const tailwindPackages = (angularVersion && parseInt(angularVersion) >= 18)
+        ? ['tailwindcss', '@tailwindcss/postcss', 'postcss']
+        : ['tailwindcss', 'postcss', 'autoprefixer'];
+
+    await new Promise((resolve) => {
+      const process = spawn(npxCmd, ['npm', 'install', '-D', ...tailwindPackages], { stdio: 'inherit', shell: true });
+      process.on('close', () => {
+        resolve();
+      });
+    });
+
+    shell.ShellString(`\n@tailwind base;\n@tailwind components;\n@tailwind utilities;\n`).toEnd(stylesFile)
     console.log(chalk.white('Updated Tailwind CSS config file: tailwind.config.js, styles.css'))
   }
 
@@ -84,6 +107,7 @@ const npxCmd = isWindows ? 'npx.cmd' : 'npx';
   } else {
     console.log(chalk.green('\n✨ Setup Complete!'));
   }
+
   console.log(chalk.green('🚀 You can now start your project by running,\n'));
   console.log(chalk.cyan(`    cd ${projectName} && ng serve --open\n`))
 
